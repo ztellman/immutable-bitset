@@ -1,6 +1,5 @@
-(defproject immutable-bitset "0.1.0-SNAPSHOT"
+(defproject immutable-bitset "0.1.0"
   :description "a bitset which is immutable"
-  :url "http://example.com/FIXME"
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}
   :dependencies [[primitive-math "0.1.2"]]

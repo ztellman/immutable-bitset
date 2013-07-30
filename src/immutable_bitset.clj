@@ -203,7 +203,8 @@
 ;;;
 
 (defn sparse-bitset
-  "Creates an immutable set which can only store integral values."
+  "Creates an immutable set which can only store integral values.  This should be used unless elements are densely
+   clustered (many elements within a +/- 1000 range)."
   ([]
      ;; 128 bits per chunk
      (PersistentBitSet. 7 0 0 {} nil))
@@ -211,7 +212,8 @@
      (into (sparse-bitset) s)))
 
 (defn dense-bitset
-  "Creates an immutable set which can only store integral values."
+  "Creates an immutable set which can only store integral values.  This should be used only if elements are densely
+   clustered (many elements within a +/- 1000 range)."
   ([]
      ;; 4096 bits per chunk
      (PersistentBitSet. 12 0 0 {} nil))
