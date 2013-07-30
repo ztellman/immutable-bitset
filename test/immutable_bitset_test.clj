@@ -7,8 +7,8 @@
   (:import
     [java.util BitSet]))
 
-(deftest test-set-operations
-  (let [s (bitset [1 10 100 1000])]
+(deftest test-bitset-operations
+  (let [s (sparse-bitset [1 10 100 1000])]
     (is (= #{1 10 100 1000} s))
     (is (= #{1 10 1000}
           (disj s 100)
@@ -27,7 +27,10 @@
 (deftest ^:benchmark benchmark-modify-set
   (println "sparse bitset into 1e3")
   (c/quick-bench
-    (into (bitset) (range 1e3)))
+    (into (sparse-bitset) (range 1e3)))
+  (println "dense bitset into 1e3")
+    (c/quick-bench
+    (into (dense-bitset) (range 1e3)))
   (println "normal set into 1e3")
   (c/quick-bench
     (into #{} (range 1e3)))
@@ -39,7 +42,11 @@
 
 (deftest ^:benchmark benchmark-check-set
   (println "check sparse bitset")
-  (let [b (into (bitset) (range 1e3))]
+  (let [b (into (sparse-bitset) (range 1e3))]
+    (c/quick-bench
+      (contains? b 123)))
+  (println "check dense bitset")
+  (let [b (into (dense-bitset) (range 1e3))]
     (c/quick-bench
       (contains? b 123)))
   (println "check normal set")

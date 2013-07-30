@@ -9,12 +9,8 @@
   [^long generation
    ^BitSet bitset])
 
-(def ^:const chunk-size 1024)
-(def ^:const bit-shift (/ (Math/log chunk-size) (Math/log 2)))
-(def ^:const bit-mask (dec chunk-size))
-
-(defn- ^Chunk bit-set-chunk [^long generation]
-  (Chunk. generation (BitSet. chunk-size)))
+(defn- ^Chunk bit-set-chunk [^long generation log2-chunk-size]
+  (Chunk. generation (BitSet. (p/<< 1 log2-chunk-size))))
 
 (defn- bit-seq [^java.util.BitSet bitset ^long offset]
   (let [cnt (long (.cardinality bitset))
@@ -28,8 +24,25 @@
 
 (declare bitset ->persistent ->transient)
 
-(deftype PersistentSparseBitSet
-  [^long generation
+(defmacro ^:private assoc-bitset [x & {:as fields}]
+  (let [type (-> &env ^clojure.lang.Compiler$LocalBinding (get x) .getJavaClass)
+        field-names [:log2-chunk-size :generation :count :m :meta]]
+    `(new ~type
+       ~@(map
+           (fn [field-name]
+             (get fields field-name
+               `(~(symbol (str "." (name field-name))) ~x)))
+           field-names))))
+
+(definline ^:private chunk-idx [n bit-shift]
+  `(p/>> ~n ~bit-shift))
+
+(definline ^:private idx-within-chunk [n bit-shift]
+  `(p/bit-and ~n (-> 1 (p/<< ~bit-shift) p/dec)))
+
+(deftype PersistentBitSet
+  [^long log2-chunk-size
+   ^long generation
    ^long count
    m
    meta]
@@ -46,7 +59,7 @@
 
   clojure.lang.IObj
   (meta [_] meta)
-  (withMeta [_ meta] (PersistentSparseBitSet. generation count m meta))
+  (withMeta [this meta] (assoc-bitset this :meta meta))
 
   clojure.lang.IEditableCollection
   (asTransient [this] (->transient this))
@@ -55,7 +68,7 @@
   (seq [_]
     (mapcat
       (fn [[slot ^Chunk v]]
-        (bit-seq (.bitset v) (p/<< (long slot) bit-shift)))
+        (bit-seq (.bitset v) (p/<< (long slot) log2-chunk-size)))
       m))
 
   clojure.lang.IPersistentSet
@@ -68,155 +81,136 @@
   (empty [_] (bitset))
   (contains [_ n]
     (let [n (long n)
-          slot (p/>> n bit-shift)]
+          slot (chunk-idx n log2-chunk-size)]
       (if-let [^Chunk chunk (get m slot)]
-        (let [idx (p/bit-and n bit-mask)]
+        (let [idx (idx-within-chunk n log2-chunk-size)]
           (.get ^BitSet (.bitset chunk) idx))
         false)))
   (disjoin [this n]
     (let [n (long n)
-          slot (p/>> n bit-shift)]
+          slot (chunk-idx n log2-chunk-size)]
       (if-let [^Chunk chunk (get m slot)]
-        (let [idx (p/bit-and n bit-mask)]
+        (let [idx (idx-within-chunk n log2-chunk-size)]
           (if (.get ^BitSet (.bitset chunk) idx)
             (let [generation (p/inc generation)]
-              (PersistentSparseBitSet.
-                generation
-                (p/dec count)
-                (assoc m slot
-                  (Chunk. generation
-                    (doto ^BitSet (.clone ^BitSet (.bitset chunk))
-                      (.set idx false))))
-                meta))
+              (assoc-bitset this
+                :count (p/dec count)
+                :m (assoc m slot
+                     (Chunk. generation
+                       (doto ^BitSet (.clone ^BitSet (.bitset chunk))
+                         (.set idx false))))))
             this))
         this)))
   (cons [this n]
     (let [n (long n)
-          slot (p/>> n bit-shift)
+          slot (chunk-idx n log2-chunk-size)
           generation (p/inc generation)
-          idx (p/bit-and n bit-mask)]
+          idx (idx-within-chunk n log2-chunk-size)]
       (if-let [^Chunk chunk (get m slot)]
         (if-not (.get ^BitSet (.bitset chunk) idx)
-          (PersistentSparseBitSet.
-            generation
-            (p/inc count)
-            (assoc m slot
-              (Chunk. generation
-                (doto ^BitSet (.clone ^BitSet (.bitset chunk))
-                  (.set idx true))))
-            meta)
+          (assoc-bitset this
+            :count (p/inc count)
+            :m (assoc m slot
+                 (Chunk. generation
+                   (doto ^BitSet (.clone ^BitSet (.bitset chunk))
+                     (.set idx true)))))
           this)
-        (PersistentSparseBitSet.
-          generation
-          (p/inc count)
-          (let [^Chunk chunk (bit-set-chunk generation)]
-            (.set ^BitSet (.bitset chunk) idx true)
-            (assoc m slot chunk))
-          meta)))))
+        (assoc-bitset this
+          :count (p/inc count)
+          :m (let [^Chunk chunk (bit-set-chunk generation log2-chunk-size)]
+               (.set ^BitSet (.bitset chunk) idx true)
+               (assoc m slot chunk)))))))
 
-(deftype TransientSparseBitSet
-  [^long generation
+(deftype TransientBitSet
+  [^long log2-chunk-size
+   ^long generation
    ^long count
    m
    meta]
 
-  java.util.Set
-  (size [_] count)
-  (isEmpty [_] (zero? count))
-  (iterator [this] (clojure.lang.SeqIterator. (seq this)))
-  (containsAll [this s] (every? #(contains? this %) s))
-
   clojure.lang.IObj
   (meta [_] meta)
-  (withMeta [_ meta] (TransientSparseBitSet. generation count m meta))
-
-  clojure.lang.Seqable
-  (seq [_]
-    (mapcat
-      (fn [[slot ^Chunk v]]
-        (bit-seq (.bitset v) (p/<< (long slot) bit-shift)))
-      m))
+  (withMeta [this meta] (assoc-bitset this :meta meta))
 
   clojure.lang.ITransientSet
   (count [_] count)
   (persistent [this] (->persistent this))
   (contains [_ n]
     (let [n (long n)
-          slot (p/>> n bit-shift)]
+          slot (chunk-idx n log2-chunk-size)]
       (if-let [^Chunk chunk (get m slot)]
-        (let [idx (p/bit-and n bit-mask)]
+        (let [idx (idx-within-chunk n log2-chunk-size)]
           (.get ^BitSet (.bitset chunk) idx))
         false)))
   (disjoin [this n]
     (let [n (long n)
-          slot (p/>> n bit-shift)]
+          slot (chunk-idx n log2-chunk-size)]
       (if-let [^Chunk chunk (get m slot)]
-        (let [idx (p/bit-and n bit-mask)]
+        (let [idx (idx-within-chunk n log2-chunk-size)]
           (if (.get ^BitSet (.bitset chunk) idx)
             (if (p/== (.generation chunk) generation)
               (do
                 (.set ^BitSet (.bitset chunk) idx false)
-                (TransientSparseBitSet.
-                  generation
-                  (p/dec count)
-                  m
-                  meta))
-              (TransientSparseBitSet.
-                generation
-                (p/dec count)
-                (let [^BitSet bitset (.clone ^BitSet (.bitset chunk))]
-                  (.set bitset idx false)
-                  (assoc m slot (Chunk. generation bitset)))
-                meta))
+                (assoc-bitset this :count (p/dec count)))
+              (assoc-bitset this
+                :count (p/dec count)
+                :m (let [^BitSet bitset (.clone ^BitSet (.bitset chunk))]
+                     (.set bitset idx false)
+                     (assoc! m slot (Chunk. generation bitset)))))
             this))
         this)))
   (conj [this n]
     (let [n (long n)
-          slot (p/>> n bit-shift)
-          idx (p/bit-and n bit-mask)]
+          slot (chunk-idx n log2-chunk-size)
+          idx (idx-within-chunk n log2-chunk-size)]
       (if-let [^Chunk chunk (get m slot)]
         (if-not (.get ^BitSet (.bitset chunk) idx)
           (if (p/== (.generation chunk) generation)
             (do
               (.set ^BitSet (.bitset chunk) idx true)
-              (TransientSparseBitSet.
-                generation
-                (p/inc count)
-                m
-                meta))
-            (TransientSparseBitSet.
-              generation
-              (p/inc count)
-              (let [^BitSet bitset (.clone ^BitSet (.bitset chunk))]
-                (.set bitset idx true)
-                (assoc m slot bitset))
-              meta))
+              (assoc-bitset this :count (p/inc count)))
+            (assoc-bitset this
+              :count (p/inc count)
+              :m (let [^BitSet bitset (.clone ^BitSet (.bitset chunk))]
+                   (.set bitset idx true)
+                   (assoc! m slot bitset))))
           this)
-        (TransientSparseBitSet.
-          generation
-          (p/inc count)
-          (let [^Chunk chunk (bit-set-chunk generation)]
-            (.set ^BitSet (.bitset chunk) idx true)
-            (assoc m slot chunk))
-          meta)))))
+        (assoc-bitset this
+          :count (p/inc count)
+          :m (let [^Chunk chunk (bit-set-chunk generation log2-chunk-size)]
+               (.set ^BitSet (.bitset chunk) idx true)
+               (assoc! m slot chunk)))))))
 
-(defn- ->persistent [^TransientSparseBitSet bitset]
-  (PersistentSparseBitSet.
+(defn- ->persistent [^TransientBitSet bitset]
+  (PersistentBitSet.
+    (.log2-chunk-size bitset)
     (p/inc (.generation bitset))
     (.count bitset)
-    (.m bitset)
+    (persistent! (.m bitset))
     (.meta bitset)))
 
-(defn- ->transient [^PersistentSparseBitSet bitset]
-  (TransientSparseBitSet.
+(defn- ->transient [^PersistentBitSet bitset]
+  (TransientBitSet.
+    (.log2-chunk-size bitset)
     (p/inc (.generation bitset))
     (.count bitset)
-    (.m bitset)
+    (transient (.m bitset))
     (.meta bitset)))
 
-(defn bitset
-  "Creates a space-efficient integer set."
+;;;
+
+(defn sparse-bitset
+  "Creates an immutable set which can only store integral values."
   ([]
-     (PersistentSparseBitSet. 0 0 (sorted-map) nil))
+     ;; 128 bits per chunk
+     (PersistentBitSet. 7 0 0 {} nil))
   ([s]
-     (into (bitset) s)))
+     (into (sparse-bitset) s)))
+
+(defn dense-bitset
+  "Creates an immutable set which can only store integral values."
+  ([]
+     ;; 4096 bits per chunk
+     (PersistentBitSet. 12 0 0 {} nil))
+  ([s]
+     (into (dense-bitset) s)))

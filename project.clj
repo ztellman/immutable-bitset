@@ -8,4 +8,5 @@
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.5.1"]
                                   [criterium "0.4.1"]]}}
   :test-selectors {:default (complement :benchmark)
-                   :benchmark :benchmark})
+                   :benchmark :benchmark}
+  :jvm-opts ^:replace ["-server"])
