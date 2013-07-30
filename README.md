@@ -2,7 +2,9 @@ Clojure's immutable sets are great, but they can be hugely inefficient when we'r
 
 ### usage
 
+```clj
 [immutable-bitset "0.1.0"]
+```
 
 There are only two functions exposed by this library, `immutable-bitset/sparse-bitset` and `immutable-bitset/dense-bitset`.
 
