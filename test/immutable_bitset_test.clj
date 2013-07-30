@@ -22,7 +22,8 @@
     (is (= #{1 10}
           (-> s transient (disj! 100 1000) persistent!)
           (-> s transient (disj! 10 100 100) (conj! 10) persistent!)
-          ))))
+          ))
+    (is (= #{1 10 100 1000} s))))
 
 (deftest ^:benchmark benchmark-modify-set
   (println "sparse bitset into 1e3")

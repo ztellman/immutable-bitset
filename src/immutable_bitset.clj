@@ -94,6 +94,7 @@
           (if (.get ^BitSet (.bitset chunk) idx)
             (let [generation (p/inc generation)]
               (assoc-bitset this
+                :generation generation
                 :count (p/dec count)
                 :m (assoc m slot
                      (Chunk. generation
@@ -109,6 +110,7 @@
       (if-let [^Chunk chunk (get m slot)]
         (if-not (.get ^BitSet (.bitset chunk) idx)
           (assoc-bitset this
+            :generation generation
             :count (p/inc count)
             :m (assoc m slot
                  (Chunk. generation
@@ -116,6 +118,7 @@
                      (.set idx true)))))
           this)
         (assoc-bitset this
+          :generation generation
           :count (p/inc count)
           :m (let [^Chunk chunk (bit-set-chunk generation log2-chunk-size)]
                (.set ^BitSet (.bitset chunk) idx true)
