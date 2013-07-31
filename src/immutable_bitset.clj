@@ -6,7 +6,7 @@
      BitSet]))
 
 (deftype Chunk
-  [^long generation
+  [^int generation
    ^BitSet bitset])
 
 (defn- ^Chunk bitset-chunk [^long generation log2-chunk-size]
@@ -41,9 +41,9 @@
   `(p/bit-and ~n (-> 1 (p/<< ~bit-shift) p/dec)))
 
 (deftype PersistentBitSet
-  [^long log2-chunk-size
-   ^long generation
-   ^long count
+  [^byte log2-chunk-size
+   ^int generation
+   ^int count
    m
    meta]
 
@@ -98,25 +98,21 @@
       (if-let [^Chunk chunk (get m slot)]
         (let [idx (idx-within-chunk n log2-chunk-size)]
           (if (.get ^BitSet (.bitset chunk) idx)
-            (let [generation (p/inc generation)]
-              (assoc-bitset this
-                :generation generation
-                :count (p/dec count)
-                :m (assoc m slot
-                     (Chunk. generation
-                       (doto ^BitSet (.clone ^BitSet (.bitset chunk))
-                         (.set idx false))))))
+            (assoc-bitset this
+              :count (p/dec count)
+              :m (assoc m slot
+                   (Chunk. generation
+                     (doto ^BitSet (.clone ^BitSet (.bitset chunk))
+                       (.set idx false)))))
             this))
         this)))
   (cons [this n]
     (let [n (long n)
           slot (chunk-idx n log2-chunk-size)
-          generation (p/inc generation)
           idx (idx-within-chunk n log2-chunk-size)]
       (if-let [^Chunk chunk (get m slot)]
         (if-not (.get ^BitSet (.bitset chunk) idx)
           (assoc-bitset this
-            :generation generation
             :count (p/inc count)
             :m (assoc m slot
                  (Chunk. generation
@@ -124,16 +120,15 @@
                      (.set idx true)))))
           this)
         (assoc-bitset this
-          :generation generation
           :count (p/inc count)
           :m (let [^Chunk chunk (bitset-chunk generation log2-chunk-size)]
                (.set ^BitSet (.bitset chunk) idx true)
                (assoc m slot chunk)))))))
 
 (deftype TransientBitSet
-  [^long log2-chunk-size
-   ^long generation
-   ^long count
+  [^byte log2-chunk-size
+   ^int generation
+   ^int count
    m
    meta]
 
@@ -193,7 +188,7 @@
 (defn- ->persistent [^TransientBitSet bitset]
   (PersistentBitSet.
     (.log2-chunk-size bitset)
-    (p/inc (.generation bitset))
+    (.generation bitset)
     (.count bitset)
     (persistent! (.m bitset))
     (.meta bitset)))

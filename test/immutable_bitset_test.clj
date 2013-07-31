@@ -108,7 +108,7 @@
   (let [s (into #{} (range 1e3))]
     (c/quick-bench
       (contains? s 123)))
-  (println "mutable bitset add 1e3")
+  (println "mutable bitset lookup")
   (let [b (BitSet. 1e3)]
     (c/quick-bench
       (.get b 123))))
