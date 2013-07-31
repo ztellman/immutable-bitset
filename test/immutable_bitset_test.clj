@@ -3,12 +3,13 @@
     [clojure test]
     [immutable-bitset])
   (:require
-    [criterium.core :as c])
+    [criterium.core :as c]
+    [clojure.set :as s])
   (:import
     [java.util BitSet]))
 
-(deftest test-bitset-operations
-  (let [s (sparse-bitset [1 10 100 1000])]
+(defn run-test-set-add-remove [constructor]
+  (let [s (constructor [1 10 100 1000])]
     (is (= #{1 10 100 1000} s))
     (is (= #{1 10 1000}
           (disj s 100)
@@ -21,9 +22,31 @@
           ))
     (is (= #{1 10}
           (-> s transient (disj! 100 1000) persistent!)
-          (-> s transient (disj! 10 100 100) (conj! 10) persistent!)
+          (-> s transient (disj! 10 100 1000) (conj! 10) persistent!)
           ))
     (is (= #{1 10 100 1000} s))))
+
+(deftest test-bitset-add-remove
+  (run-test-set-add-remove set)
+  (run-test-set-add-remove sparse-bitset)
+  (run-test-set-add-remove dense-bitset))
+
+(defn run-test-set-algebra [constructor union intersection difference]
+  (let [a (constructor (range 11))
+        b (constructor (range 10 20))]
+    (is (= (set (range 20)) (union a b)))
+    (is (= (set (range 20)) (union b a)))
+    (is (= #{10} (intersection a b)))
+    (is (= #{10} (intersection b a)))
+    (is (= (set (range 10)) (difference a b)))
+    (is (= (set (range 11 20)) (difference b a)))))
+
+(deftest test-set-algebra
+  (run-test-set-algebra set s/union s/intersection s/difference)
+  (run-test-set-algebra sparse-bitset union intersection difference)
+  (run-test-set-algebra dense-bitset union intersection difference))
+
+;;;
 
 (deftest ^:benchmark benchmark-modify-set
   (println "sparse bitset into 1e3")

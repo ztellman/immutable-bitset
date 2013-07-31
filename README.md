@@ -3,10 +3,10 @@ Clojure's immutable sets are great, but they can be hugely inefficient when we'r
 ### usage
 
 ```clj
-[immutable-bitset "0.1.0"]
+[immutable-bitset "0.1.1"]
 ```
 
-There are only two functions exposed by this library, `immutable-bitset/sparse-bitset` and `immutable-bitset/dense-bitset`.
+All functions are in the `immutable-bitset` namesapce.  There are two constructors, `sparse-bitset` and `dense-bitset`, and three operators, `union`, `intersection`, and `difference`.
 
 ```clj
 immutable-bitset> (sparse-bitset)
@@ -25,7 +25,11 @@ immutable-bitset> (conj! *1 5)
 #<TransientBitSet immutable_bitset.TransientBitSet@7c079ab0>
 immutable-bitset> (persistent! *1)
 #{1 3 5}
+immutable-bitset> (union *1 (sparse-bitset [5 7 9]))
+#{1 3 5 7 9}
 ```
+
+The set algebra operators take two bitsets, and return a bitset.  Use `clojure.set` for general set operations.
 
 `dense-bitset` behaves the same as `sparse-bitset`, the difference is only in their memory efficiency.  Consider a case where we create a set of all numbers between one and one million:
 

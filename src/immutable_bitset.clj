@@ -9,7 +9,7 @@
   [^long generation
    ^BitSet bitset])
 
-(defn- ^Chunk bit-set-chunk [^long generation log2-chunk-size]
+(defn- ^Chunk bitset-chunk [^long generation log2-chunk-size]
   (Chunk. generation (BitSet. (p/<< 1 log2-chunk-size))))
 
 (defn- bit-seq [^java.util.BitSet bitset ^long offset]
@@ -76,7 +76,10 @@
     (and (set? x)
       (every?
         #(contains? x %)
-        (seq this))))
+        (seq this))
+      (every?
+        #(contains? this %)
+        (seq x))))
   (count [_] count)
   (empty [_] (bitset))
   (contains [_ n]
@@ -120,7 +123,7 @@
         (assoc-bitset this
           :generation generation
           :count (p/inc count)
-          :m (let [^Chunk chunk (bit-set-chunk generation log2-chunk-size)]
+          :m (let [^Chunk chunk (bitset-chunk generation log2-chunk-size)]
                (.set ^BitSet (.bitset chunk) idx true)
                (assoc m slot chunk)))))))
 
@@ -180,7 +183,7 @@
           this)
         (assoc-bitset this
           :count (p/inc count)
-          :m (let [^Chunk chunk (bit-set-chunk generation log2-chunk-size)]
+          :m (let [^Chunk chunk (bitset-chunk generation log2-chunk-size)]
                (.set ^BitSet (.bitset chunk) idx true)
                (assoc! m slot chunk)))))))
 
@@ -219,3 +222,42 @@
      (PersistentBitSet. 12 0 0 {} nil))
   ([s]
      (into (dense-bitset) s)))
+
+;;;
+
+(defn- merge-bit-op [f ^PersistentBitSet a ^PersistentBitSet b]
+  (assert (= (.log2-chunk-size a) (.log2-chunk-size b)))
+  (let [log2-chunk-size (.log2-chunk-size a)
+        generation (p/inc (long (max (.generation a) (.generation b))))
+        m (merge-with
+            (fn [^Chunk a ^Chunk b]
+              (let [^Chunk chunk (Chunk. generation (.clone ^BitSet (.bitset a)))]
+                (f (.bitset chunk) (.bitset b))
+                chunk))
+            (.m a)
+            (.m b))
+        cnt (->> m
+              vals
+              (map #(.cardinality ^BitSet (.bitset ^Chunk %)))
+              (reduce +))]
+    (PersistentBitSet.
+      log2-chunk-size
+      generation
+      cnt
+      m
+      nil)))
+
+(defn union
+  "Returns the union of two bitsets."
+  [a b]
+  (merge-bit-op #(.or ^BitSet %1 %2) a b))
+
+(defn intersection
+  "Returns the intersection of two bitsets."
+  [a b]
+  (merge-bit-op #(.and ^BitSet %1 %2) a b))
+
+(defn difference
+  "Returns the difference between two bitsets."
+  [a b]
+  (merge-bit-op #(.andNot ^BitSet %1 %2) a b))
