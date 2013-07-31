@@ -52,7 +52,7 @@
   (equals [this x] (.equiv this x))
 
   java.util.Set
-  (size [_] count)
+  (size [this] count)
   (isEmpty [_] (zero? count))
   (iterator [this] (clojure.lang.SeqIterator. (seq this)))
   (containsAll [this s] (every? #(contains? this %) s))
@@ -66,14 +66,16 @@
 
   clojure.lang.Seqable
   (seq [_]
-    (mapcat
-      (fn [[slot ^Chunk v]]
-        (bit-seq (.bitset v) (p/<< (long slot) log2-chunk-size)))
-      m))
+    (when-not (zero? count)
+      (mapcat
+        (fn [[slot ^Chunk v]]
+          (bit-seq (.bitset v) (p/<< (long slot) log2-chunk-size)))
+        m)))
 
   clojure.lang.IPersistentSet
   (equiv [this x]
-    (and (set? x)
+    (and
+      (set? x)
       (= count (clojure.core/count x))
       (every?
         #(contains? x %)
@@ -223,22 +225,43 @@
 
 ;;;
 
-(defn- merge-bit-op [f ^PersistentBitSet a ^PersistentBitSet b]
+(defn- merge-bit-op [bit-set-fn keys-fn ^PersistentBitSet a ^PersistentBitSet b]
   (assert (= (.log2-chunk-size a) (.log2-chunk-size b)))
   (let [log2-chunk-size (.log2-chunk-size a)
         generation (p/inc (long (max (.generation a) (.generation b))))
-        cnt (atom (count a))
-        m (merge-with
-            (fn [^Chunk a ^Chunk b]
-              (let [^Chunk chunk (Chunk. generation (.clone ^BitSet (.bitset a)))
-                    ^BitSet b-a (.bitset chunk)
-                    ^BitSet b-b (.bitset b)
-                    cnt-a (.cardinality b-a)]
-                (f b-a b-b)
-                (swap! cnt - (p/- cnt-a (.cardinality b-a)))
-                chunk))
-            (.m a)
-            (.m b))]
+        cnt (atom 0)
+        m-a (.m a)
+        m-b (.m b)
+        ks (keys-fn m-a m-b)
+        m (zipmap
+            ks
+            (map
+              (fn [k]
+                (let [^Chunk a (get m-a k)
+                      ^Chunk b (get m-b k)]
+                  (cond
+
+                    (and a b)
+                    (let [^Chunk chunk (Chunk. generation (.clone ^BitSet (.bitset a)))
+                          ^BitSet b-a (.bitset chunk)
+                          ^BitSet b-b (.bitset b)]
+                      (bit-set-fn b-a b-b)
+                      (swap! cnt + (.cardinality b-a))
+                      chunk)
+
+                    a
+                    (let [^BitSet b-a (.bitset a)]
+                      (swap! cnt + (.cardinality b-a))
+                      a)
+
+                    b
+                    (let [^BitSet b-b (.bitset b)]
+                      (swap! cnt + (.cardinality b-b))
+                      b)
+
+                    :else
+                    (throw (IllegalStateException.)))))
+              ks))]
     (PersistentBitSet.
       log2-chunk-size
       generation
@@ -249,14 +272,33 @@
 (defn union
   "Returns the union of two bitsets."
   [a b]
-  (merge-bit-op #(.or ^BitSet %1 %2) a b))
+  (merge-bit-op
+    #(.or ^BitSet %1 %2)
+    (fn [a b]
+      (concat
+        (keys a)
+        (remove #(contains? a %) (keys b))))
+    a
+    b))
 
 (defn intersection
   "Returns the intersection of two bitsets."
   [a b]
-  (merge-bit-op #(.and ^BitSet %1 %2) a b))
+  (merge-bit-op
+    #(.and ^BitSet %1 %2)
+    (fn [a b]
+      (filter #(contains? b %) (keys a)))
+    a
+    b))
 
 (defn difference
   "Returns the difference between two bitsets."
   [a b]
-  (merge-bit-op #(.andNot ^BitSet %1 %2) a b))
+  (merge-bit-op
+    #(.andNot ^BitSet %1 %2)
+    (fn [a b]
+      (concat
+        (keys a)
+        (remove #(contains? b %) (keys b))))
+    a
+    b))

@@ -34,15 +34,43 @@
 (defn run-test-set-algebra [constructor union intersection difference]
   (let [a (constructor (range 11))
         b (constructor (range 10 20))]
-    (is (= (set (range 20)) (union a b)))
-    (is (= (set (range 20)) (union b a)))
-    (is (= 20 (count (union b a))))
-    (is (= #{10} (intersection a b)))
-    (is (= #{10} (intersection b a)))
-    (is (= 1 (count (intersection b a))))
+    (is (= (set (range 20))
+          (union a b)
+           (union b a)))
+    (is (= 20
+          (count (union b a))
+          (count (union a b))))
+    (is (= #{10}
+          (intersection a b)
+          (intersection b a)))
+    (is (= 1
+          (count (intersection b a))
+          (count (intersection a b))))
     (is (= (set (range 10)) (difference a b)))
     (is (= (set (range 11 20)) (difference b a)))
-    (is (= 9 (count (difference b a))))))
+    (is (= 10 (count (difference a b))))
+    (is (= 9 (count (difference b a)))))
+
+  (let [s-a (range 10)
+        s-b (range 10000 10010)
+        a (constructor s-a)
+        b (constructor s-b)]
+    (is (= (set (concat s-a s-b))
+          (union a b)
+          (union b a)))
+    (is (= 20
+          (count (union b a))
+          (count (union a b))))
+    (is (= #{}
+          (intersection a b)
+          (intersection b a)))
+    (is (= 0
+          (count (intersection b a))
+          (count (intersection b a))))
+    (is (= (set s-a) (difference a b)))
+    (is (= (set s-b) (difference b a)))
+    (is (= 10 (count (difference a b))))
+    (is (= 10 (count (difference b a))))))
 
 (deftest test-set-algebra
   (run-test-set-algebra set s/union s/intersection s/difference)
