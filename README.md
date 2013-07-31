@@ -6,7 +6,7 @@ Clojure's immutable sets are great, but they can be hugely inefficient when we'r
 [immutable-bitset "0.1.1"]
 ```
 
-All functions are in the `immutable-bitset` namesapce.  There are two constructors, `sparse-bitset` and `dense-bitset`, and three operators, `union`, `intersection`, and `difference`.
+All functions are in the `immutable-bitset` namespace.  There are two constructors, `sparse-bitset` and `dense-bitset`, and three operators, `union`, `intersection`, and `difference`.
 
 ```clj
 immutable-bitset> (sparse-bitset)
