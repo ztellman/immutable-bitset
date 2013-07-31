@@ -294,9 +294,6 @@
   [a b]
   (merge-bit-op
     #(.andNot ^BitSet %1 %2)
-    (fn [a b]
-      (concat
-        (keys a)
-        (remove #(contains? b %) (keys b))))
+    (fn [a b] (keys a))
     a
     b))
