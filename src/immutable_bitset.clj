@@ -74,12 +74,10 @@
   clojure.lang.IPersistentSet
   (equiv [this x]
     (and (set? x)
+      (= count (clojure.core/count x))
       (every?
         #(contains? x %)
-        (seq this))
-      (every?
-        #(contains? this %)
-        (seq x))))
+        (seq this))))
   (count [_] count)
   (empty [_] (bitset))
   (contains [_ n]
@@ -229,21 +227,22 @@
   (assert (= (.log2-chunk-size a) (.log2-chunk-size b)))
   (let [log2-chunk-size (.log2-chunk-size a)
         generation (p/inc (long (max (.generation a) (.generation b))))
+        cnt (atom (count a))
         m (merge-with
             (fn [^Chunk a ^Chunk b]
-              (let [^Chunk chunk (Chunk. generation (.clone ^BitSet (.bitset a)))]
-                (f (.bitset chunk) (.bitset b))
+              (let [^Chunk chunk (Chunk. generation (.clone ^BitSet (.bitset a)))
+                    ^BitSet b-a (.bitset chunk)
+                    ^BitSet b-b (.bitset b)
+                    cnt-a (.cardinality b-a)]
+                (f b-a b-b)
+                (swap! cnt - (p/- cnt-a (.cardinality b-a)))
                 chunk))
             (.m a)
-            (.m b))
-        cnt (->> m
-              vals
-              (map #(.cardinality ^BitSet (.bitset ^Chunk %)))
-              (reduce +))]
+            (.m b))]
     (PersistentBitSet.
       log2-chunk-size
       generation
-      cnt
+      (long @cnt)
       m
       nil)))
 

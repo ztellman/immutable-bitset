@@ -36,10 +36,13 @@
         b (constructor (range 10 20))]
     (is (= (set (range 20)) (union a b)))
     (is (= (set (range 20)) (union b a)))
+    (is (= 20 (count (union b a))))
     (is (= #{10} (intersection a b)))
     (is (= #{10} (intersection b a)))
+    (is (= 1 (count (intersection b a))))
     (is (= (set (range 10)) (difference a b)))
-    (is (= (set (range 11 20)) (difference b a)))))
+    (is (= (set (range 11 20)) (difference b a)))
+    (is (= 9 (count (difference b a))))))
 
 (deftest test-set-algebra
   (run-test-set-algebra set s/union s/intersection s/difference)
