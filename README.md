@@ -47,7 +47,7 @@ Both of these are significantly smaller than the standard set, but the dense bit
 (into (dense-bitset) s)   ; ~670mb
 ```
 
-In this case, the dense bitset is much less efficient than the standard set, while the sparse bitset is about equally large.  So as a rule of thumb, use `dense-bitset` where the elements are densely clustered, and `sparse-bitset` for everything else.
+In this case, the dense bitset is much less efficient than the standard set, while the sparse bitset is about equally large.  So as a rule of thumb, use `dense-bitset` where the elements are densely clustered (each element has multiple elements within +/- 1000), and `sparse-bitset` for everything else.
 
 The bitsets are both somewhat faster than the standard set, as well.  Adding elements is ~50-100% faster, and checking for an element is ~15% faster.
 
