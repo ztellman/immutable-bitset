@@ -2,6 +2,7 @@
   (:require
     [clojure.test :refer :all]
     [immutable-bitset :as ib]
+    [clojure.set :as set]
     [simple-check.core :as sc]
     [simple-check.generators :as gen]
     [simple-check.properties :as prop]
@@ -40,7 +41,22 @@
   ;; for all list of integers `is`, conjoining themm all into
   ;; `s` and then disjoining them all should be empty
   (prop/for-all [is (gen/vector gen/int)]
-                (conj-then-disj-all-elements-empty? s is)))
+    (conj-then-disj-all-elements-empty? s is)))
+
+;; set algebra operators
+
+(defn all-set-algebra-operators-equivalent?
+  [generator]
+  (prop/for-all [a (gen/vector gen/int) b (gen/vector gen/int)]
+    (let [sa (set a)
+          sb (set b)
+          isa (generator a)
+          isb (generator b)]
+      (and
+        (= (set/difference sa sb) (ib/difference isa isb))
+        (= (set/difference sb sa) (ib/difference isb isa))
+        (= (set/union sa sb) (ib/union isa isb) (ib/union isb isa))
+        (= (set/intersection sa sb) (ib/intersection isa isb) (ib/intersection isb isa))))))
 
 
 ;; Sparse
@@ -52,6 +68,9 @@
 (defspec prop-sparse-fill-then-empty 1000
   (fill-then-empty-property-creator (ib/sparse-bitset)))
 
+(defspec prop-sparse-all-set-algebra-operators-equivalent 1000
+  (all-set-algebra-operators-equivalent? ib/sparse-bitset))
+
 ;; Dense
 ;;
 
@@ -60,3 +79,6 @@
 
 (defspec prop-dense-fill-then-empty 1000
   (fill-then-empty-property-creator (ib/dense-bitset)))
+
+(defspec prop-dense-all-set-algebra-operators-equivalent 1000
+  (all-set-algebra-operators-equivalent? ib/dense-bitset))
