@@ -204,7 +204,7 @@
               :cnt (inc-cnt cnt)
               :m (let [^BitSet bitset (.clone ^BitSet (.bitset chunk))]
                    (.set bitset idx true)
-                   (assoc! m slot bitset))))
+                   (assoc! m slot (Chunk. generation bitset)))))
           this)
         (assoc-bitset this
           :cnt (inc-cnt cnt)

@@ -18,6 +18,7 @@
     (is (= #{1 10 100 1000}
           (conj s 1 100)
           (-> s (disj 20) (conj 1 100))
+          (-> s (disj 1) transient (conj! 1) persistent!)
           (-> s transient (disj! 20) (conj! 100) persistent!)
           ))
     (is (= #{1 10}
