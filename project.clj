@@ -1,4 +1,4 @@
-(defproject immutable-bitset "0.1.3"
+(defproject immutable-bitset "0.1.4"
   :description "a bitset which is immutable"
   :license {:name "MIT License"
             :url "http://opensource.org/licenses/MIT"}

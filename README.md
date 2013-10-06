@@ -3,7 +3,7 @@ Clojure's immutable sets are great, but they can be hugely inefficient when we'r
 ### usage
 
 ```clj
-[immutable-bitset "0.1.3"]
+[immutable-bitset "0.1.4"]
 ```
 
 All functions are in the `immutable-bitset` namespace.  There are two constructors, `sparse-bitset` and `dense-bitset`, and three operators, `union`, `intersection`, and `difference`.
