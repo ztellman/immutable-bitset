@@ -61,9 +61,11 @@
 
   java.lang.Object
   (hashCode [this]
-    (->> this
-      (map #(p/bit-xor (long %) (p/>>> (long %) 32)))
-      (reduce #(p/+ (long %1) (long %2)))))
+    (if (zero? (count this))
+      0
+      (->> this
+           (map #(p/bit-xor (long %) (p/>>> (long %) 32)))
+           (reduce #(p/+ (long %1) (long %2))))))
   (equals [this x] (.equiv this x))
 
   java.util.Set
