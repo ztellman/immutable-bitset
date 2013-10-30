@@ -6,7 +6,8 @@
   :global-vars {*warn-on-reflection* true}
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.5.1"]
                                   [criterium "0.4.1"]
-                                  [reiddraper/simple-check "0.2.1"]]}}
+                                  [reiddraper/simple-check "0.5.1"]
+                                  [collection-check "0.1.1-SNAPSHOT"]]}}
   :test-selectors {:default (complement :benchmark)
                    :benchmark :benchmark}
   :jvm-opts ^:replace ["-server"])

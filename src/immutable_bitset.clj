@@ -61,9 +61,11 @@
 
   java.lang.Object
   (hashCode [this]
-    (->> this
-      (map #(p/bit-xor (long %) (p/>>> (long %) 32)))
-      (reduce #(p/+ (long %1) (long %2)))))
+    (if (zero? cnt)
+      0
+      (->> this
+        (map #(p/bit-xor (long %) (p/>>> (long %) 32)))
+        (reduce #(p/+ (long %1) (long %2))))))
   (equals [this x] (.equiv this x))
 
   java.util.Set
@@ -86,6 +88,11 @@
         (fn [[slot ^Chunk v]]
           (bit-seq (.bitset v) (p/<< (long slot) log2-chunk-size)))
         m)))
+
+  clojure.lang.IFn
+  (invoke [this idx]
+    (when (contains? this idx)
+      idx))
 
   clojure.lang.IPersistentSet
   (equiv [this x]
