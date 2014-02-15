@@ -4,33 +4,15 @@
     [immutable-bitset])
   (:require
     [criterium.core :as c]
-    [clojure.set :as s])
+    [clojure.set :as s]
+    [collection-check :as check]
+    [simple-check.generators :as gen])
   (:import
     [java.util BitSet]))
 
-(defn run-test-set-add-remove [constructor]
-  (let [s (constructor [1 10 100 1000])]
-    (is (= #{1 10 100 1000} s))
-    (is (= #{1 10 1000}
-          (disj s 100)
-          (-> s (disj 100) (conj 100) (disj 100))
-          ))
-    (is (= #{1 10 100 1000}
-          (conj s 1 100)
-          (-> s (disj 20) (conj 1 100))
-          (-> s (disj 1) transient (conj! 1) persistent!)
-          (-> s transient (disj! 20) (conj! 100) persistent!)
-          ))
-    (is (= #{1 10}
-          (-> s transient (disj! 100 1000) persistent!)
-          (-> s transient (disj! 10 100 1000) (conj! 10) persistent!)
-          ))
-    (is (= #{1 10 100 1000} s))))
-
-(deftest test-bitset-add-remove
-  (run-test-set-add-remove set)
-  (run-test-set-add-remove sparse-bitset)
-  (run-test-set-add-remove dense-bitset))
+(deftest test-equivalency
+  (check/assert-set-like 1e3 (sparse-bitset) gen/pos-int)
+  (check/assert-set-like 1e3 (dense-bitset) gen/pos-int))
 
 (defn run-test-set-algebra [constructor union intersection difference]
   (let [a (constructor (range 11))
