@@ -7,7 +7,8 @@
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.5.1"]
                                   [criterium "0.4.1"]
                                   [reiddraper/simple-check "0.5.1"]
-                                  [collection-check "0.1.1-SNAPSHOT"]]}}
+                                  [collection-check "0.1.1-SNAPSHOT"]]}
+             :1.6 {:dependencies [[org.clojure/clojure "1.6.0-beta1"]]}}
   :test-selectors {:default (complement :benchmark)
                    :benchmark :benchmark}
   :jvm-opts ^:replace ["-server"])
