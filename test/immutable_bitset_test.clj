@@ -60,6 +60,14 @@
   (run-test-set-algebra sparse-bitset union intersection difference)
   (run-test-set-algebra dense-bitset union intersection difference))
 
+(deftest hash-consistency
+  (doseq [elems [ (range 10) [] ]]
+    (let [s1a (set elems)
+          s1b (sparse-bitset elems)
+          s1c (dense-bitset elems)]
+    (is (= s1a s1b s1c))
+    (is (= (hash s1a) (hash s1b) (hash s1c))))))
+
 ;;;
 
 (deftest ^:benchmark benchmark-modify-set

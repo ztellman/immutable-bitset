@@ -52,6 +52,11 @@
        cnt#
        (p/inc cnt#))))
 
+(defmacro compile-if [test then else]
+  (if (eval test)
+    then
+    else))
+
 (deftype PersistentBitSet
   [^byte log2-chunk-size
    ^int generation
@@ -67,6 +72,12 @@
         (map #(p/bit-xor (long %) (p/>>> (long %) 32)))
         (reduce #(p/+ (long %1) (long %2))))))
   (equals [this x] (.equiv this x))
+
+  clojure.lang.IHashEq
+  (hasheq [this]
+    (compile-if (resolve 'clojure.core/hash-unordered-coll)
+      (hash-unordered-coll this)
+      (.hashCode this)))
 
   java.util.Set
   (size [this] (count this))
