@@ -52,7 +52,7 @@
        cnt#
        (p/inc cnt#))))
 
-(defmacro compile-if [test then else]
+(defmacro ^:private compile-if [test then else]
   (if (eval test)
     then
     else))
