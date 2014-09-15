@@ -1,3 +1,9 @@
++# Project Moved to Contrib!
++
++ztellman/immutable-bitset is now [clojure/data.int-map](https://github.com/clojure/data.int-map)
++
++## Immutable Integer Sets
+
 Clojure's immutable sets are great, but they can be hugely inefficient when we're only trying to store integers.  This library contains an implementation for immutable sets which are both faster and smaller for this special case.
 
 ### usage
