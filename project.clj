@@ -8,8 +8,9 @@
                                   [criterium "0.4.3"]
                                   [reiddraper/simple-check "0.5.6"]
                                   [collection-check "0.1.3"]]}
-             :1.6 {:dependencies [[org.clojure/clojure "1.6.0-beta1"]]}}
+             :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
+             :master {:dependencies [[org.clojure/clojure "1.7.0-alpha2"]]}}
   :test-selectors {:default (complement :benchmark)
                    :benchmark :benchmark}
-  :aliases {"all" ["with-profile" "1.6,dev:dev"]}
+  :aliases {"all" ["with-profile" "dev,1.6:dev,master:dev"]}
   :jvm-opts ^:replace ["-server"])
